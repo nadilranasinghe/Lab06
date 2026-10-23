@@ -1,5 +1,6 @@
 const express = require('express');
 const Task = require('../models/Task');
+const redis = require('../config/redis');
 const { body } = require('express-validator');
 const { validate } = require('../middleware/validate');
 
@@ -37,16 +38,29 @@ router.get('/health', (req, res) => {
 
 router.get('/', async (req, res, next) => {
   try {
+    const cached = await redis.get('tasks:all');
+
+    if (cached) {
+      return res.json({
+        source: 'cache',
+        data: JSON.parse(cached)
+      });
+    }
+
     const tasks = await Task.findAll({
       order: [['createdAt', 'DESC']]
     });
 
-    res.json(tasks);
+    await redis.setEx('tasks:all', 60, JSON.stringify(tasks));
+
+    res.json({
+      source: 'database',
+      data: tasks
+    });
   } catch (err) {
     next(err);
   }
 });
-
 router.get('/:id', async (req, res, next) => {
   try {
     const task = await Task.findByPk(req.params.id);
@@ -64,6 +78,7 @@ router.get('/:id', async (req, res, next) => {
 router.post('/', taskRules, async (req, res, next) => {
   try {
     const task = await Task.create(req.body);
+    await redis.del('tasks:all');
     res.status(201).json(task);
   } catch (err) {
     next(err);
@@ -79,6 +94,7 @@ router.put('/:id', updateTaskRules, async (req, res, next) => {
     }
 
     await task.update(req.body);
+    await redis.del('tasks:all');
     res.json(task);
   } catch (err) {
     next(err);
@@ -96,6 +112,7 @@ router.delete('/:id', async (req, res, next) => {
     }
 
     res.status(204).send();
+    await redis.del('tasks:all');
   } catch (err) {
     next(err);
   }

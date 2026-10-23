@@ -14,6 +14,8 @@ const compression = require('compression');
 const session = require('express-session');
 const passport = require('./config/passport');
 
+const redis = require('./config/redis');
+
 const app = express();
 
 app.use(helmet());
@@ -68,12 +70,15 @@ app.use((err, req, res, next) => {
 const port = process.env.PORT || 3000;
 
 sequelize.sync()
-  .then(() => {
+  .then(async () => {
+    await redis.connect();
+    console.log('Redis connected');
+
     app.listen(port, () => {
       console.log(`API running at http://localhost:${port}`);
     });
   })
   .catch((err) => {
-    console.error('Database startup failed:', err);
+    console.error('Startup failed:', err);
     process.exit(1);
   });
