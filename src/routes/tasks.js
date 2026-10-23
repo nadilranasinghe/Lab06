@@ -1,7 +1,35 @@
 const express = require('express');
 const Task = require('../models/Task');
+const { body } = require('express-validator');
+const { validate } = require('../middleware/validate');
 
 const router = express.Router();
+
+const taskRules = [
+  body('title')
+    .isString().withMessage('title must be text')
+    .bail()
+    .trim()
+    .isLength({ min: 3, max: 120 })
+    .withMessage('title must be 3-120 characters'),
+  body('completed').optional().isBoolean().toBoolean(),
+  body('priority').optional().isInt({ min: 1, max: 3 }).toInt(),
+  validate
+];
+
+const updateTaskRules = [
+  body('title')
+    .optional()
+    .isString().withMessage('title must be text')
+    .bail()
+    .trim()
+    .isLength({ min: 3, max: 120 })
+    .withMessage('title must be 3-120 characters'),
+  body('completed').optional().isBoolean().toBoolean(),
+  body('priority').optional().isInt({ min: 1, max: 3 }).toInt(),
+  validate
+];
+
 
 router.get('/health', (req, res) => {
   res.json({ status: 'ok', service: 'task-api' });
@@ -33,7 +61,7 @@ router.get('/:id', async (req, res, next) => {
   }
 });
 
-router.post('/', async (req, res, next) => {
+router.post('/', taskRules, async (req, res, next) => {
   try {
     const task = await Task.create(req.body);
     res.status(201).json(task);
@@ -42,7 +70,7 @@ router.post('/', async (req, res, next) => {
   }
 });
 
-router.put('/:id', async (req, res, next) => {
+router.put('/:id', updateTaskRules, async (req, res, next) => {
   try {
     const task = await Task.findByPk(req.params.id);
 
