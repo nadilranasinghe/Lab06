@@ -2,6 +2,8 @@ require('dotenv').config();
 
 const express = require('express');
 const taskRoutes = require('./routes/tasks');
+const sequelize = require('./config/database');
+require('./models/Task');
 
 const app = express();
 
@@ -20,6 +22,13 @@ app.use((req, res) => {
 
 const port = process.env.PORT || 3000;
 
-app.listen(port, () => {
-  console.log(`API running at http://localhost:${port}`);
-});
+sequelize.sync()
+  .then(() => {
+    app.listen(port, () => {
+      console.log(`API running at http://localhost:${port}`);
+    });
+  })
+  .catch((err) => {
+    console.error('Database startup failed:', err);
+    process.exit(1);
+  });
