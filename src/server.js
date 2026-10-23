@@ -4,6 +4,7 @@ const express = require('express');
 const taskRoutes = require('./routes/tasks');
 const sequelize = require('./config/database');
 require('./models/Task');
+require('./models/User');
 
 const helmet = require('helmet');
 const cors = require('cors');
